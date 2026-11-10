@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* Règles modernes pour les modales <dialog> (modern-web-guidance: dialog) */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+/* Style sobre pour les barres de défilement internes aux panneaux cyberpunk */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(9, 12, 26, 0.7);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 243, 255, 0.35);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 243, 255, 0.65);
+}
