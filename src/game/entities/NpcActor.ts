@@ -8,8 +8,6 @@ export interface NpcConfig {
   avatarKey: string;
   x: number;
   y: number;
-  patrolDistanceX?: number;
-  patrolDistanceY?: number;
   accentColor: string;
   accentHex: number;
   ambientBubble: string;
@@ -21,23 +19,14 @@ export class NpcActor {
   public sprite: Phaser.Physics.Arcade.Sprite;
   private labelText: Phaser.GameObjects.Text;
   private bubbleContainer: Phaser.GameObjects.Container;
-  private startX: number;
-  private startY: number;
-  private patrolPhase = 0;
-  private patrolSpeed: number;
 
   constructor(scene: Phaser.Scene, config: NpcConfig) {
     this.config = config;
-    this.startX = config.x;
-    this.startY = config.y;
-    this.patrolPhase = Math.random() * Math.PI * 2;
-    this.patrolSpeed = 0.0014 + Math.random() * 0.0005;
 
-    // Sprite PNJ net en plein jour (sans halo)
+    // Sprite PNJ immobile en plein jour
     this.sprite = scene.physics.add.sprite(config.x, config.y, config.avatarKey, 0);
     this.sprite.setImmovable(true);
     this.sprite.setDepth(16);
-    this.sprite.play(`${config.avatarKey}_idle`);
 
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     body.setSize(18, 14);
@@ -50,14 +39,14 @@ export class NpcActor {
         fontSize: '9px',
         fontStyle: 'bold',
         color: '#ffffff',
-        backgroundColor: 'rgba(15, 23, 42, 0.85)',
+        backgroundColor: 'rgba(15, 23, 42, 0.88)',
         padding: { x: 5, y: 2 },
         resolution: 2,
       })
       .setOrigin(0.5, 0.5)
       .setDepth(30);
 
-    // Bulle de dialogue claire plein jour
+    // Bulle de dialogue claire et fixe
     const bubbleBg = scene.add.graphics();
     const bubbleText = scene.add
       .text(0, 0, config.ambientBubble, {
@@ -71,7 +60,7 @@ export class NpcActor {
 
     const bw = bubbleText.width + 14;
     const bh = 18;
-    bubbleBg.fillStyle(0xffffff, 0.95);
+    bubbleBg.fillStyle(0xffffff, 0.96);
     bubbleBg.fillRoundedRect(-bw / 2, -bh / 2, bw, bh, 5);
     bubbleBg.lineStyle(1.5, config.accentHex, 0.95);
     bubbleBg.strokeRoundedRect(-bw / 2, -bh / 2, bw, bh, 5);
@@ -80,33 +69,10 @@ export class NpcActor {
     this.bubbleContainer.setDepth(31);
   }
 
-  public update(time: number): void {
-    const dx = this.config.patrolDistanceX ?? 0;
-    const dy = this.config.patrolDistanceY ?? 0;
-
-    if (dx > 0 || dy > 0) {
-      const prevX = this.sprite.x;
-      const offsetX = Math.sin(time * this.patrolSpeed + this.patrolPhase) * dx;
-      const offsetY = Math.cos(time * this.patrolSpeed + this.patrolPhase) * dy;
-
-      this.sprite.setPosition(this.startX + offsetX, this.startY + offsetY);
-
-      const movingRight = this.sprite.x > prevX + 0.05;
-      const movingLeft = this.sprite.x < prevX - 0.05;
-      if (movingRight) this.sprite.setFlipX(false);
-      if (movingLeft) this.sprite.setFlipX(true);
-
-      const walkKey = `${this.config.avatarKey}_walk`;
-      if (this.sprite.anims.currentAnim?.key !== walkKey) {
-        this.sprite.play(walkKey, true);
-      }
-    }
-
+  public update(_time?: number): void {
+    // Immobile conformément à la demande utilisateur
     this.labelText.setPosition(this.sprite.x, this.sprite.y - 23);
-    this.bubbleContainer.setPosition(
-      this.sprite.x,
-      this.sprite.y - 41 + Math.sin(time * 0.004 + this.patrolPhase) * 2
-    );
+    this.bubbleContainer.setPosition(this.sprite.x, this.sprite.y - 40);
   }
 
   public toInteractablePayload(): InteractablePayload {
@@ -122,7 +88,7 @@ export class NpcActor {
         speaker: this.config.name,
         role: this.config.roleLabel,
         lines: this.config.dialogueLines,
-        statusTag: 'CONNECTÉ • COUR BAGGIO',
+        statusTag: 'PRÉSENT • COUR BAGGIO',
       },
     };
   }

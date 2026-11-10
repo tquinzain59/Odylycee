@@ -26,7 +26,7 @@ export class CorridorScene extends Phaser.Scene {
   private isTransitioning = false;
 
   private readonly worldWidth = 1360;
-  private readonly worldHeight = 480;
+  private readonly worldHeight = 760;
 
   constructor() {
     super({ key: 'CorridorScene' });
@@ -39,18 +39,25 @@ export class CorridorScene extends Phaser.Scene {
     ProceduralPixelAssets.generateAll(this);
     useGameStore.getState().setCurrentZone('baggio:tsti2d3');
 
-    // Monde & Caméra en plein jour (aucun halo ni assombrissement)
-    this.physics.world.setBounds(36, 174, this.worldWidth - 72, this.worldHeight - 210);
+    // Monde & Caméra en plein jour occupant 100% de l'écran
+    this.physics.world.setBounds(36, 174, this.worldWidth - 72, 390);
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.cameras.main.setBackgroundColor('#cbd5e1');
-    this.cameras.main.setZoom(1.35);
+    this.updateCameraFit();
+    this.scale.on('resize', this.updateCameraFit, this);
     this.cameras.main.fadeIn(220, 241, 245, 249);
 
     const wallColliders = this.physics.add.staticGroup();
 
-    // 1. Sol clair en terrazzo (plein jour)
+    // 1. Sol clair en terrazzo (plein jour) du couloir + espace d'étude
     this.add
-      .tileSprite(0, 140, this.worldWidth, this.worldHeight - 140, 'tile_corridor_floor')
+      .tileSprite(0, 140, this.worldWidth, 445, 'tile_corridor_floor')
+      .setOrigin(0, 0)
+      .setDepth(0);
+
+    // 1b. Vue plongeante depuis la baie vitrée du 2e étage sur la cour arborée en bas (pour occuper 100% de l'écran)
+    this.add
+      .tileSprite(0, 585, this.worldWidth, this.worldHeight - 585, 'tile_courtyard_floor')
       .setOrigin(0, 0)
       .setDepth(0);
 
@@ -97,8 +104,18 @@ export class CorridorScene extends Phaser.Scene {
     });
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off('resize', this.updateCameraFit, this);
       this.unsubscribeStore?.();
     });
+  }
+
+  private updateCameraFit(): void {
+    const viewW = this.scale.width || 1280;
+    const viewH = this.scale.height || 720;
+    const minZoomX = viewW / this.worldWidth;
+    const minZoomY = viewH / this.worldHeight;
+    const zoom = Math.max(1.25, minZoomX, minZoomY);
+    this.cameras.main.setZoom(zoom);
   }
 
   private drawCorridorArchitecture(wallColliders: Phaser.Physics.Arcade.StaticGroup): void {
@@ -106,14 +123,14 @@ export class CorridorScene extends Phaser.Scene {
 
     // Bande de circulation au sol claire et lisible
     g.lineStyle(2, 0x0284c7, 0.65);
-    g.lineBetween(60, 310, 1300, 310);
+    g.lineBetween(60, 315, 1300, 315);
 
     // Séparateur au sol entre Tronc Commun (gauche) et Laboratoires de Spécialités (droite)
     g.lineStyle(2.5, 0x0284c7, 0.8);
-    g.lineBetween(705, 175, 705, 420);
+    g.lineBetween(705, 175, 705, 555);
 
     this.add
-      .text(420, 330, '◄ PÔLE TRONC COMMUN [T-STI2D-3 : OUVERT À TOUS]', {
+      .text(420, 336, '◄ PÔLE TRONC COMMUN [T-STI2D-3 : OUVERT À TOUS]', {
         fontFamily: '"JetBrains Mono", monospace',
         fontSize: '10px',
         fontStyle: 'bold',
@@ -124,7 +141,7 @@ export class CorridorScene extends Phaser.Scene {
       .setDepth(3);
 
     this.add
-      .text(985, 330, 'PÔLE LABORATOIRES DE SPÉCIALITÉS [FILTRAGE DYNAMIQUE SIN / EE / ITEC] ►', {
+      .text(985, 336, 'PÔLE LABORATOIRES DE SPÉCIALITÉS [FILTRAGE DYNAMIQUE SIN / EE / ITEC] ►', {
         fontFamily: '"JetBrains Mono", monospace',
         fontSize: '10px',
         fontStyle: 'bold',
@@ -148,12 +165,29 @@ export class CorridorScene extends Phaser.Scene {
     ) as Phaser.Physics.Arcade.Sprite;
     topWall.setSize(this.worldWidth, 95).setVisible(false).refreshBody();
 
-    // Garde-corps vitré clair en bas du couloir
+    // Baie vitrée panoramique & garde-corps en bas du couloir donnant sur la cour arborée
     const bottomRail = this.add.graphics().setDepth(28);
-    bottomRail.fillStyle(0x94a3b8, 0.95);
-    bottomRail.fillRect(0, 435, this.worldWidth, 45);
+    bottomRail.fillStyle(0x94a3b8, 0.96);
+    bottomRail.fillRect(0, 565, this.worldWidth, 24);
     bottomRail.lineStyle(3, 0x475569, 1);
-    bottomRail.lineBetween(0, 435, this.worldWidth, 435);
+    bottomRail.lineBetween(0, 565, this.worldWidth, 565);
+    bottomRail.lineBetween(0, 589, this.worldWidth, 589);
+
+    // Montants de la baie vitrée
+    for (let x = 120; x < this.worldWidth; x += 180) {
+      bottomRail.fillStyle(0x475569, 1);
+      bottomRail.fillRect(x - 4, 565, 8, 24);
+    }
+
+    // Arbres de la cour vus en contrebas derrière la baie vitrée
+    const lowerTreeXs = [180, 440, 720, 980, 1220];
+    for (const tx of lowerTreeXs) {
+      this.add.image(tx, 665, 'prop_tree').setDepth(25);
+    }
+    const lowerShrubXs = [90, 310, 580, 850, 1100];
+    for (const sx of lowerShrubXs) {
+      this.add.image(sx, 635, 'prop_shrub').setDepth(24);
+    }
   }
 
   private createDynamicDoor(config: ClassroomDoorConfig, persona: Persona): void {
@@ -374,14 +408,24 @@ export class CorridorScene extends Phaser.Scene {
       rack.setDepth(7).refreshBody();
     }
 
-    const benchXs = [320, 610, 990];
+    const benchXs = [260, 520, 840, 1120];
     for (const bx of benchXs) {
       const bench = wallColliders.create(
         bx,
-        395,
+        465,
         'prop_cyber_bench'
       ) as Phaser.Physics.Arcade.Sprite;
       bench.setDepth(16).refreshBody();
+    }
+
+    const indoorPlantsXs = [150, 390, 680, 980, 1240];
+    for (const px of indoorPlantsXs) {
+      const plant = wallColliders.create(
+        px,
+        520,
+        'prop_shrub'
+      ) as Phaser.Physics.Arcade.Sprite;
+      plant.setDepth(17).refreshBody();
     }
   }
 
